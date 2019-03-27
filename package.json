@@ -18,6 +18,10 @@
   "author": "Vedmant",
   "license": "MIT",
   "dependencies": {
+    "merkletreejs": "^0.0.22",
+    "grpc": "^1.19.0",
+    "@grpc/proto-loader": "^0.4.0",
+
     "axios": "^0.18.0",
     "body-parser": "^1.18.3",
     "bootstrap": "^4.1.3",

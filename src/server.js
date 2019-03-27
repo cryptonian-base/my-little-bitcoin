@@ -7,6 +7,12 @@ const winston = require('winston')
 const {generateKeyPair} = require('./lib/wallet')
 const {TransactionError, GeneralError} = require('./errors')
 
+// Cryptonian
+const grpc = require('grpc')
+const protoLoader = require('@grpc/proto-loader')
+//const grpcLibrary = require('@grpc/grpc-js')
+var PROTO_PATH = __dirname + '/grpc-proto/notes.proto';
+
 module.exports = (config, bus, store, miner) => ({
   app: null,
   http: null,
@@ -150,6 +156,37 @@ module.exports = (config, bus, store, miner) => ({
     })
 
     this.http.listen(config.httpPort, config.httpHost, () => debug('Listening http on host: ' + config.httpHost + '; port: ' + config.httpPort))
+
+// Cryptonian
+    const notesProto = grpc.load(PROTO_PATH)
+    const notes = [
+      { id: '1', title: 'Note 1', content: 'Content 1'},
+      { id: '2', title: 'Note 2', content: 'Content 2'}
+  ]
+ /*   
+    // Load protobuf
+    let proto = grpc.loadPackageDefinition(
+      protoLoader.loadSync(PROTO_PATH, {
+        keepCase: true,
+        longs: String,
+        enums: String,
+        defaults: true,
+        oneofs: true
+      })
+    );
+    let notes_proto = grpc.loadPackageDefinition(proto).noteService;
+*/    
+    const server = new grpc.Server()
+    server.addService(notesProto.NoteService.service, {
+      list: (_, callback) => {
+        callback(null, notes)
+      }
+    })
+
+    server.bind('127.0.0.1:50051', grpc.ServerCredentials.createInsecure())
+    console.log('Server running at http://127.0.0.1:50051')
+    server.start()
+
   },
 
 })

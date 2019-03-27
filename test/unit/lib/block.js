@@ -3,12 +3,40 @@ const {generateKeyPair} = require('../../../src/lib/wallet')
 const {checkBlock, makeGenesisBlock, createBlock, calculateHash} = require('../../../src/lib/block')
 const {BlockError} = require('../../../src/errors')
 
+// Cryptonian
+const {isDataValid, checkTransactions, checkTransaction, createRewardTransaction, buildTransaction} = require('../../../src/lib/transaction')
+
 describe('block lib', () => {
 
   const genesisBlock = makeGenesisBlock()
   let validBlock;
   let invalidBlock;
   let wallet;
+
+  //== Cryptonian - build a target chain to test functionalities. =====//
+  const wallet1 = generateKeyPair();
+  const wallet2 = generateKeyPair();
+  const wallet3 = generateKeyPair();
+  // Create simple chain with three blocks
+  const chain = [genesisBlock];
+  for (let i = 0; i < 2; i++) {
+    let rewardTx = createRewardTransaction(wallet1)
+    let block = createBlock([rewardTx], chain[chain.length - 1], wallet1)
+    block.hash = calculateHash(block)
+    chain.push(block)
+  }
+
+  const unspent = chain
+    // Get all transactions from the chain
+    .reduce((transactions, block) => transactions.concat(block.transactions), [])
+    // Get all outputs from transactions and append tx id
+    .reduce((outputs, tx) => outputs.concat(tx.outputs.map(o => Object.assign({}, o, {tx: tx.id}))), [])
+
+  let tx1 = buildTransaction(wallet1, wallet2.public, 10, unspent)
+  let tx2 = buildTransaction(wallet1, wallet3.public, 10, unspent)
+  let block3 = createBlock([tx1,tx2], chain[chain.length - 1], wallet1)
+
+  //===================================================================//
 
   beforeEach(() => {
     wallet = generateKeyPair()
@@ -18,6 +46,10 @@ describe('block lib', () => {
 
   it('should create valid block', (done) => {
     checkBlock(genesisBlock, validBlock, Number.MAX_SAFE_INTEGER, [])
+    //Cryptonian
+    console.log(chain[2])
+    checkBlock(chain[2], block3, Number.MAX_SAFE_INTEGER, [])
+    
     done()
   })
 

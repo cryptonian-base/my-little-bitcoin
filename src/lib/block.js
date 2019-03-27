@@ -3,6 +3,10 @@ const CryptoJS = require('crypto-js')
 const Joi = require('joi')
 const {checkTransactions, createRewardTransaction} = require('./transaction')
 
+// Cryptonian
+const MerkleTree = require('merkletreejs')
+const SHA256 = require('crypto-js/sha256')
+
 const blockSchema = Joi.object().keys({
   index: Joi.number(), // Transaction index or height
   prevHash: Joi.string().hex().length(64), // Hash of the previous block
@@ -10,6 +14,9 @@ const blockSchema = Joi.object().keys({
   transactions: Joi.array(), // List of transactions, included into the block
   nonce: Joi.number(), // Nonce, required for proof of work protocol
   hash: Joi.string().hex().length(64), // Current block hash
+
+  // Cryptonian
+  merkleRoot: Joi.string().hex().length(64),  // 트랜잭션들의 머클 트리에 대한 머클 루트
 })
 
 /**
@@ -38,6 +45,13 @@ function checkBlock (previousBlock, block, difficulty, unspent) {
   if (calculateHash(block) !== block.hash) throw new BlockError('Invalid block hash')
   if (blockDifficulty > difficulty) throw new BlockError('Invalid block difficulty')
   checkTransactions(block.transactions, unspent)
+
+  // Cryptonian - block에 트랜잭션의 머클루트 계산
+  const leaves = block.transactions.map(x => SHA256(x))
+  const transaction_tree = new MerkleTree (leaves, SHA256)
+  const transaction_root = transaction_tree.getRoot().toString('hex')
+  
+  if (block.merkleRoot !== transaction_root) throw new BlockError('Invalid transaction merkle root')
 }
 
 /**
@@ -78,13 +92,22 @@ function makeGenesisBlock () {
 function createBlock (transactions, lastBlock, wallet) {
   transactions = transactions.slice()
   transactions.push(createRewardTransaction(wallet))
+
+  // Cryptonian - block에 트랜잭션의 머클루트 계산
+  const leaves = transactions.map(x => SHA256(x))
+  const transaction_tree = new MerkleTree (leaves, SHA256)
+  const transaction_root = transaction_tree.getRoot().toString('hex')
+
   const block = {
     index: lastBlock.index + 1,
     prevHash: lastBlock.hash,
     time: Math.floor(new Date().getTime() / 1000),
     transactions,
     nonce: 0,
+    //Cryptonian
+    merkleRoot: transaction_root,
   }
+
   block.hash = calculateHash(block)
 
   return block

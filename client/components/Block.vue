@@ -33,6 +33,10 @@
               <td>Nonce</td>
               <td>{{ block.nonce }}</td>
             </tr>
+            <tr>
+              <td>MerkleRoot</td>
+              <td>{{ block.merkleRoot }}</td>
+            </tr>
             </tbody>
           </table>
         </div>
