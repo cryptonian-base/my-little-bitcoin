@@ -7,11 +7,58 @@ const winston = require('winston')
 const {generateKeyPair} = require('./lib/wallet')
 const {TransactionError, GeneralError} = require('./errors')
 
-// Cryptonian
+//================= Cryptonian ================//
 const grpc = require('grpc')
 const protoLoader = require('@grpc/proto-loader')
 //const grpcLibrary = require('@grpc/grpc-js')
 var PROTO_PATH = __dirname + '/grpc-proto/notes.proto';
+var ROUTE_PROTO_PATH = __dirname + '/grpc-proto/route_guide.proto'
+
+var feature_list = [];
+
+function checkFeature(point) {
+  var feature;
+  // Check if there is already a feature object for the given point
+  for (var i = 0; i < feature_list.length; i++) {
+    feature = feature_list[i];
+    if (feature.location.latitude === point.latitude &&
+        feature.location.longitude === point.longitude) {
+      return feature;
+    }
+  }
+  var name = '';
+  feature = {
+    name: name,
+    location: point
+  };
+  return feature;
+}
+// route_guide.proto
+function getFeature(call, callback) {
+  //..
+  console.log("protobuf getFeature func is called..");
+  callback(null, checkFeature(call.request));
+}
+
+function getrpcServer() {
+
+  var packageDefinition = protoLoader.loadSync ( ROUTE_PROTO_PATH,{
+    keepCase: true,
+    longs: String,
+    enums: String,
+    defaults: true,
+    oneofs: true});
+var protoDescriptor = grpc.loadPackageDefinition(packageDefinition);
+var routeguide = protoDescriptor.routeguide;
+
+  var server = new grpc.Server();
+  server.addProtoService(routeguide.RouteGuide.service, {
+    getFeature: getFeature
+  });
+  return server;
+}
+
+//============================================//
 
 module.exports = (config, bus, store, miner) => ({
   app: null,
@@ -157,12 +204,12 @@ module.exports = (config, bus, store, miner) => ({
 
     this.http.listen(config.httpPort, config.httpHost, () => debug('Listening http on host: ' + config.httpHost + '; port: ' + config.httpPort))
 
-// Cryptonian
-    const notesProto = grpc.load(PROTO_PATH)
-    const notes = [
-      { id: '1', title: 'Note 1', content: 'Content 1'},
-      { id: '2', title: 'Note 2', content: 'Content 2'}
-  ]
+    //==== Cryptonian. Implementing grpc/proto Template ====//
+    var routeServer = getrpcServer();
+    routeServer.bind('0.0.0.0:50051', grpc.ServerCredentials.createInsecure());
+    routeServer.start();
+    
+    
  /*   
     // Load protobuf
     let proto = grpc.loadPackageDefinition(
@@ -176,6 +223,13 @@ module.exports = (config, bus, store, miner) => ({
     );
     let notes_proto = grpc.loadPackageDefinition(proto).noteService;
 */    
+
+/* 
+    const notesProto = grpc.load(PROTO_PATH)
+    const notes = [
+      { id: '1', title: 'Note 1', content: 'Content 1'},
+      { id: '2', title: 'Note 2', content: 'Content 2'}
+    ]
     const server = new grpc.Server()
     server.addService(notesProto.NoteService.service, {
       list: (_, callback) => {
@@ -186,6 +240,7 @@ module.exports = (config, bus, store, miner) => ({
     server.bind('127.0.0.1:50051', grpc.ServerCredentials.createInsecure())
     console.log('Server running at http://127.0.0.1:50051')
     server.start()
+*/
 
   },
 
