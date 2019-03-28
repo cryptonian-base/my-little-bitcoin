@@ -12,7 +12,7 @@ const grpc = require('grpc')
 const protoLoader = require('@grpc/proto-loader')
 //const grpcLibrary = require('@grpc/grpc-js')
 var PROTO_PATH = __dirname + '/grpc-proto/notes.proto';
-var ROUTE_PROTO_PATH = __dirname + '/grpc-proto/route_guide.proto'
+var ROUTE_PROTO_PATH = __dirname + '/grpc-proto/route_guide.proto';
 
 var feature_list = [];
 
